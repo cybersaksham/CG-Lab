@@ -9,15 +9,19 @@ const int HEIGHT = 800;
 GLfloat fillColor[] = {1.0f, 0.0f, 0.0f};
 GLfloat boundaryColor[] = {0.0f, 0.0f, 0.0f};
 
-void checkPixel(int x, int y, stack<pair<int, int>> &st, GLfloat* fillColor) {
+bool checkColor(GLfloat const *color1, GLfloat const *color2) {
+   return (color1[0] == color2[0] && color1[1] == color2[1] && color1[2] == color2[2]);
+}
+
+void checkPixel(int x, int y, stack<pair<int, int>> &st) {
    GLfloat color[3];
-   glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, &color);
-   if(color[0] != fillColor[0] || color[1] != fillColor[1] || color[2] != fillColor[2]) {
+   glReadPixels(x - 1, y, 1, 1, GL_RGB, GL_FLOAT, &color);
+   if(!checkColor(color, fillColor) && !checkColor(color, boundaryColor)) {
       st.push({x, y});
    }
 }
 
-void boundaryFill8(int x, int y, GLfloat* fillColor, GLfloat* boundaryColor) {
+void boundaryFill8(int x, int y) {
    stack<pair<int, int>> pixels;
    pixels.push(make_pair(x, y));
 
@@ -30,21 +34,21 @@ void boundaryFill8(int x, int y, GLfloat* fillColor, GLfloat* boundaryColor) {
 
       GLfloat color[3];
       glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, &color);
-      if (color[0] != boundaryColor[0] || color[1] != boundaryColor[1] || color[2] != boundaryColor[2]) {
+      if (!checkColor(color, boundaryColor)) {
          glColor3f(fillColor[0], fillColor[1], fillColor[2]);
          glBegin(GL_POINTS);
          glVertex2i(x, y);
          glEnd();
          glFlush();
 
-         checkPixel(x + 1, y, pixels, fillColor);
-         checkPixel(x, y + 1, pixels, fillColor);
-         checkPixel(x - 1, y, pixels, fillColor);
-         checkPixel(x, y - 1, pixels, fillColor);
-         checkPixel(x + 1, y + 1, pixels, fillColor);
-         checkPixel(x - 1, y + 1, pixels, fillColor);
-         checkPixel(x + 1, y - 1, pixels, fillColor);
-         checkPixel(x - 1, y - 1, pixels, fillColor);
+         checkPixel(x + 1, y, pixels);
+         checkPixel(x, y + 1, pixels);
+         checkPixel(x - 1, y, pixels);
+         checkPixel(x, y - 1, pixels);
+         checkPixel(x + 1, y + 1, pixels);
+         checkPixel(x - 1, y + 1, pixels);
+         checkPixel(x + 1, y - 1, pixels);
+         checkPixel(x - 1, y - 1, pixels);
       }
    }
 }
@@ -75,7 +79,7 @@ void display() {
 
 void mouseClick(int button, int state, int x, int y) {
    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-      boundaryFill8(x, HEIGHT - y, fillColor, boundaryColor);
+      boundaryFill8(x, HEIGHT - y);
    }
 }
 

@@ -3,94 +3,116 @@
 
 using namespace std;
 
-float xmin = 50, ymin = 50, xmax = 100, ymax = 100;
+struct Point {
+    int x;
+    int y;
+};
 
-void clip(float x1, float y1, float x2, float y2) {
-	float t1 = 0, t2 = 1, dx = x2 - x1, dy;
-	float p[4], q[4];
+Point p1, p2;
+const int WIDTH = 500;
+const int HEIGHT = 500;
 
-	for (int edge = 0; edge < 4; edge++) {
-		if (edge == 0) {
-			dy = y2 - y1;
-			p[0] = -dx;
-			q[0] = x1 - xmin;
-		}
-		if (edge == 1) {
-			dy = y2 - y1;
-			p[1] = dx;
-			q[1] = xmax - x1;
-		}
-		if (edge == 2) {
-			dx = x2 - x1;
-			dy = -(y2 - y1);
-			p[2] = dy;
-			q[2] = y1 - ymin;
-		}
-		if (edge == 3) {
-			dx = x2 - x1;
-			dy = -(y2 - y1);
-			p[3] = -dy;
-			q[3] = ymax - y1;
-		}
+GLfloat red[] = {1.0, 0.0, 0.0};
+GLfloat blue[] = {0.0, 0.0, 1.0};
 
-		if (p[edge] == 0 && q[edge] < 0) return;
+bool clip_line(Point &p1, Point &p2, int x_min, int x_max, int y_min, int y_max) {
+    int dx = p2.x - p1.x;
+    int dy = p2.y - p1.y;
+    int p[4];
+    int q[4];
+    p[0] = -dx;
+    q[0] = p1.x - x_min;
+    p[1] = dx;
+    q[1] = x_max - p1.x;
+    p[2] = -dy;
+    q[2] = p1.y - y_min;
+    p[3] = dy;
+    q[3] = y_max - p1.y;
 
-		float t = q[edge] / p[edge];
+    float u1 = 0.0, u2 = 1.0;
+    for (int i = 0; i < 4; i++) {
+        if (p[i] == 0) {
+            if (q[i] < 0)
+                return false;
+        } else {
+            float u = (float)q[i] / p[i];
+            if (p[i] < 0) {
+                u1 = max(u1, u);
+                if (u1 > u2)
+                    return false;
+            } else {
+                u2 = min(u2, u);
+                if (u1 > u2)
+                    return false;
+            }
+        }
+    }
 
-		if (p[edge] < 0) {
-			if (t > t2) return;
-			else if (t > t1) t1 = t;
-		} else {
-			if (t < t1) return;
-			else if (t < t2) t2	 = t;
-		}
-	}
+    if (u1 < 0)
+        u1 = 0;
+    if (u2 > 1)
+        u2 = 1;
 
-	float finalx1 = x1 + t1 * dx;
-	float finaly1 = y1 + t1 * dy;
-	float finalx2 = x1 + t2 * dx;
-	float finaly2 = y1 + t2 * dy;
+    p2.x = p1.x + u2 * dx;
+    p2.y = p1.y + u2 * dy;
+    p1.x = p1.x + u1 * dx;
+    p1.y = p1.y + u1 * dy;
 
-	cout << finalx1 << " " << finaly1 << endl;
-	glColor3f(0.0, 1.0, 1.0);
-	glBegin(GL_LINES);
-	glVertex2f(finalx1, finaly1);
-	glVertex2f(finalx2, finaly2);
-	glEnd();
+    return true;
 }
 
 void display() {
-	glClear(GL_COLOR_BUFFER_BIT);
-	
-	glColor3f(0.0, 0.0, 1.0);
-	glRectf(xmin, ymin, xmax, ymax);
-	
+    glClear(GL_COLOR_BUFFER_BIT);
 
-	float x1 = 60, y1 = 20, x2 = 80, y2 = 120;
+    glColor3fv(red);
+    glBegin(GL_LINE_LOOP);
+    glVertex2i(100, 100);
+    glVertex2i(300, 100);
+    glVertex2i(300, 300);
+    glVertex2i(100, 300);
+    glEnd();
 
-	glColor3f(1.0, 0.0, 0.0);
-	glBegin(GL_LINES);
-	glVertex2f(x1, y1);
-	glVertex2f(x2, y2);
-	glEnd();
+    glColor3fv(blue);
+    glBegin(GL_LINES);
+    glVertex2i(p1.x, p1.y);
+    glVertex2i(p2.x, p2.y);
+    glEnd();
 
-	clip(x1, y1, x2, y2);
-
-	glFlush();
-}
- 
-int main(int argc, char** argv) {
-	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-	glutInitWindowSize(400, 300);
-	glutInitWindowPosition(100, 100);
-	glutCreateWindow("Liang Barsky Line Clipping Algorithm");
-	glClearColor(1.0, 1.0, 1.0, 1.0);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluOrtho2D(0, 400, 0, 300);
-	glutDisplayFunc(display);
-	glutMainLoop();
-	return 0;
+    glFlush();
 }
 
+void keyboard(unsigned char key, int x, int y) {
+    if (key == 'c') {
+		if (!clip_line(p1, p2, 100, 100, 300, 300)) {
+            p1.x = p2.x = 0;
+            p1.y = p2.y = 0;
+        }
+        glutPostRedisplay();
+    }
+}
+
+int main(int argc, char *argv[]) {
+    cout << "Enter the end points of the line: " << endl;
+    cout << "x1: ";
+    cin >> p1.x;
+    cout << "y1: ";
+    cin >> p1.y;
+    cout << "x2: ";
+    cin >> p2.x;
+    cout << "y2: ";
+    cin >> p2.y;
+
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutInitWindowSize(WIDTH, HEIGHT);
+    glutCreateWindow("Liang Barsky Line Clipping Algorithm");
+
+    glClearColor(1.0, 1.0, 1.0, 1.0);
+    gluOrtho2D(0, WIDTH, 0, HEIGHT);
+
+    glutDisplayFunc(display);
+    glutKeyboardFunc(keyboard);
+    glutMainLoop();
+
+    return 0;
+}
